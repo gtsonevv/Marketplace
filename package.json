@@ -9,6 +9,8 @@
     "@ethersproject/contracts": "^5.0.8",
     "@ethersproject/hash": "^5.0.9",
     "@ethersproject/providers": "^5.0.17",
+    "@nomiclabs/hardhat-waffle": "^2.0.3",
+    "@openzeppelin/contracts": "^4.5.0",
     "@toruslabs/torus-embed": "^1.8.1",
     "@walletconnect/web3-provider": "^1.2.2",
     "authereum": "0.0.4-beta.201",
@@ -43,6 +45,8 @@
     "@types/react-dom": "^16.9.8",
     "@types/styled-components": "4.1.8",
     "@types/web3": "^1.2.2",
+    "chai": "^4.3.6",
+    "hardhat": "^2.9.2",
     "typescript": "3.2.2"
   },
   "browserslist": [
