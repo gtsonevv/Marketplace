@@ -30,6 +30,10 @@ describe("Marketplace Tests", function () {
     let tokenId = await testNFT.connect(addr1).mint();
     expect(marketplace.connect(addr1).addItem(testNFT.address, tokenId)).to.be.revertedWith('You are not the owner of that token.');;
   });
+  
+  it("Should throw an error when try to add a token from a collection that doesn't exist", async function() {
+    expect(marketplace.connect(addr1).addItem(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB, 1)).to.be.revertedWith("Collection doesn't exist.");
+  });
 
   it("Should add a new item", async function() {
     await marketplace.connect(addr1).addItem(testNFT.address, 1);

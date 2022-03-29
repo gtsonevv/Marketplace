@@ -22,7 +22,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
     event ItemAdded(uint itemId, address nftContract, uint tokenId);
     event ItemListed(uint itemId, address nftContract, uint tokenId, uint price);
     event ItemSold(uint itemId, address nftContract, uint tokenId, uint price, address seller, address buyer);
-    event NewOffer(uint itemId, address buyer, uint price);
+    event OfferSent(uint itemId, address buyer, uint price);
     event OfferRejected(uint itemId);
 
     mapping(uint => Item) public idToItem;
@@ -54,6 +54,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
     }
 
     function addItem(address _contractAddress, uint _tokenId) external {
+        require(collectionExists[_contractAddress], "Collection doesn't exist.");
         address owner = ERC721(_contractAddress).ownerOf(_tokenId);
         require(owner == msg.sender, "You are not the owner of that token.");
 
@@ -78,13 +79,14 @@ contract Marketplace is Ownable, ReentrancyGuard {
     }
 
     function sendOffer(uint _itemId) external payable itemExists(_itemId) {
+        require(msg.value > 0, "The value must be greater than 0.");
         address owner = ERC721(idToItem[_itemId].contractAddress).ownerOf(idToItem[_itemId].tokenId);
         require(msg.sender != owner, "You are the owner of that item.");
         uint offerId = ++itemIdToOfferCount[_itemId];
         itemIdToBuyerToPrice[_itemId][msg.sender] = msg.value;
         itemIdToOfferIdToBuyer[_itemId][offerId] = msg.sender;
 
-        emit NewOffer(_itemId, msg.sender, msg.value);
+        emit OfferSent(_itemId, msg.sender, msg.value);
     }
 
     function acceptOffer(uint _itemId, uint _offerId) external nonReentrant itemExists(_itemId) { 
