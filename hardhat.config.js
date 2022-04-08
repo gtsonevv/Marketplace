@@ -1,4 +1,8 @@
 require("@nomiclabs/hardhat-waffle");
+require("dotenv").config();
+
+const privateKey = process.env.PRIVATE_KEY;
+const endpoint = process.env.URL;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -18,4 +22,10 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  */
 module.exports = {
   solidity: "0.8.12",
+  networks: {
+    rinkeby: {
+      url: endpoint,
+      accounts: [`0x${privateKey}`]
+    }
+  }
 };
