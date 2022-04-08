@@ -73,7 +73,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
         uint tokenId = idToItem[_itemId].tokenId;
         address owner = ERC721(nftAddress).ownerOf(tokenId);
         require(owner == msg.sender, "You are not the owner of that token.");
-        require(_price > 0, "Price must be greater than zero.");
+        require(_price > 0, "Price must be greater than 0.");
 
         idToItem[_itemId].price = _price;
         idToItem[_itemId].forSale = true;
@@ -137,6 +137,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
         require(idToItem[_itemId].forSale, "Item is not for sale.");
         uint itemPrice = idToItem[_itemId].price;
         require(msg.value >= itemPrice, "Insufficient funds.");
+        require(idToItem[_itemId].owner != msg.sender, "You can not buy your own item.");
         
         address contractAddress = idToItem[_itemId].contractAddress;
         uint tokenId = idToItem[_itemId].tokenId;

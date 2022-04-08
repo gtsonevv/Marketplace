@@ -10,6 +10,8 @@ import Column from './components/Column';
 import Loader from './components/Loader';
 import Button from './components/Button';
 import ConnectButton from './components/ConnectButton';
+// import Loader from 'react-spinners-loading'
+// import Loading from '../node_modules/react-fullscreen-loading/lib/loading';
 
 import { Web3Provider } from '@ethersproject/providers';
 import { getChainData } from './helpers/utilities';
@@ -34,7 +36,6 @@ import {
 import { formatEther, parseUnits } from 'ethers/lib/utils';
 import Wrapper from './components/Wrapper';
 import Header from './components/Header';
-import { logMsg } from './helpers/dev';
 // import { ethers } from 'hardhat';
 
 // const SLayout = styled.div`
@@ -196,17 +197,26 @@ class App extends React.Component<any, any> {
       return;
     }
 
+    const { marketplaceContract } = this.state;
+
     provider.on("accountsChanged", this.changedAccount);
     provider.on("networkChanged", this.networkChanged);
     provider.on("close", this.close);
-    provider.on("CollectionAdded", () => {
-      logMsg("Raboti")
+    marketplaceContract.on("CollectionAdded", () => {
       this.getCollections();
     });
-    provider.on("ItemAdded", this.getAllItems);
-    provider.on("ItemListed", this.getAllItems);
-    provider.on("ItemSold", this.getAllItems);
-    provider.on("OfferSent", this.getAllItems);
+    marketplaceContract.on("ItemAdded", () => {
+      this.getAllItems();
+    });
+    marketplaceContract.on("ItemListed", () => {
+      this.getAllItems();
+    });
+    marketplaceContract.on("ItemSold", () => {
+      this.getAllItems();
+    });
+    marketplaceContract.on("OfferSent", () => {
+      this.getAllItems();
+    });
 
     await this.web3Modal.off('accountsChanged');
   };
@@ -274,27 +284,18 @@ class App extends React.Component<any, any> {
 
   public addCollection = async () => {
     const { marketplaceContract, createCollectionInputValue } = this.state;
-    await marketplaceContract.addCollection(createCollectionInputValue);
-    // const receipt = await transaction.wait();
-    // if (receipt.status != 1) return;
-    // this.getCollections();
+    marketplaceContract.addCollection(createCollectionInputValue);
   }
 
   public sendOffer = async (itemId: number, idx: number) => {
     const { marketplaceContract, sendOfferInputValues } = this.state;
-    const transaction = await marketplaceContract.sendOffer(itemId, { value: parseUnits(sendOfferInputValues[idx]) });
-    const receipt = await transaction.wait();
-    if (receipt.status != 1) return;
-    this.getAllItems();
+    marketplaceContract.sendOffer(itemId, { value: parseUnits(sendOfferInputValues[idx]) });
   }
 
   public buyItem = async (itemId: number) => {
     const { marketplaceContract } = this.state;
     const itemPrice = this.state.items.find(item => item.itemId === itemId)!.price;
-    const transaction = await marketplaceContract.buyItem(itemId, { value: parseUnits(itemPrice) });
-    const receipt = transaction.wait();
-    if (receipt.status != 1) return;
-    this.getAllItems();
+    marketplaceContract.buyItem(itemId, { value: parseUnits(itemPrice) });
   }
 
   public listItem = async (itemId: number, idx: number) => {
@@ -309,10 +310,7 @@ class App extends React.Component<any, any> {
       if (approveReceipt.status != 1) return;
     }
 
-    const listItemTransaction = await marketplaceContract.listItem(itemId, parseUnits(listItemInputValues[idx]));
-    const listItemReceipt = await listItemTransaction.wait();
-    if (listItemReceipt.status != 1) return;
-    this.getAllItems();
+    marketplaceContract.listItem(itemId, parseUnits(listItemInputValues[idx]));
   }
 
   public acceptOffer = async (itemId: number, offerId: number) => {
@@ -329,18 +327,12 @@ class App extends React.Component<any, any> {
 
     const buyer = await marketplaceContract.itemIdToOfferIdToBuyer(itemId, offerId);
     const price = await marketplaceContract.itemIdToBuyerToPrice(itemId, buyer);
-    const acceptOfferTransaction = await marketplaceContract.acceptOffer(itemId, offerId, { value: price });
-    const acceptOfferReceipt = await acceptOfferTransaction.wait();
-    if (acceptOfferReceipt.status != 1) return;
-    this.getAllItems();
+    marketplaceContract.acceptOffer(itemId, offerId, { value: price });
   }
 
   public addItem = async () => {
     const { marketplaceContract, addItemCollectionInputValue, addItemTokenIdInputValue } = this.state;
-    const transaction = await marketplaceContract.addItem(addItemCollectionInputValue, +addItemTokenIdInputValue);
-    const receipt = await transaction.wait();
-    if (receipt.status != 1) return;
-    this.getAllItems();
+    marketplaceContract.addItem(addItemCollectionInputValue, +addItemTokenIdInputValue);
   }
 
   public getCollections = async () => {
@@ -639,6 +631,7 @@ class App extends React.Component<any, any> {
 
     return (
       <div>
+        {/* <Loading loading background="#2ecc71" loaderColor="#3498db" /> */}
         <div>
           <Header
             connected={connected}
