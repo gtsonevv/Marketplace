@@ -75,6 +75,24 @@ describe("Marketplace Tests", function () {
     expect(marketplace.buyItem(2, {value: 1})).to.be.revertedWith("Item doesn't exist.");
   });
 
+  it("Should send an offer", async function() {
+    let balance = await ethers.provider.getBalance(marketplace.address);
+    await marketplace.connect(addr2).sendOffer(1, {value: 5}); // Offer Id: 1
+    let newBalance = await ethers.provider.getBalance(marketplace.address);
+    expect(newBalance - 5).to.equal(balance);
+  });
+
+  it("Should buy the item", async function() {
+    await marketplace.connect(addr3).buyItem(1, {value: 1});
+    expect(await testNFT.ownerOf(1)).to.equal(addr3.address);
+  });
+
+  it("Should list an item", async function() {
+    testNFT.connect(addr3).approve(marketplace.address, 1);
+    await marketplace.connect(addr3).listItem(1, 1);
+    expect(await testNFT.getApproved(1)).to.equal(marketplace.address);
+  });
+
   it("Should buy the item", async function() {
     marketplace.buyItem(1, {value: 1});
     expect(await testNFT.ownerOf(1)).to.equal(owner.address);
@@ -131,7 +149,7 @@ describe("Marketplace Tests", function () {
   });
 
   it("Should withdraw all collected fees", async function() {
-    marketplace.withdrawFees()
+    marketplace.withdrawFees();
     const marketplaceBalance = await ethers.provider.getBalance(marketplace.address);
     expect(marketplaceBalance).to.equal(0);
   });

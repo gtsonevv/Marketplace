@@ -248,7 +248,7 @@ class App extends React.Component<any, any> {
     }
   }
 
-  public networkChanged = async (networkId: number) => {
+  public networkChanged = async (_networkId: number) => {
     const library = new Web3Provider(this.provider);
     const network = await library.getNetwork();
     const chainId = network.chainId;
@@ -284,55 +284,77 @@ class App extends React.Component<any, any> {
 
   public addCollection = async () => {
     const { marketplaceContract, createCollectionInputValue } = this.state;
-    marketplaceContract.addCollection(createCollectionInputValue);
+    try {
+      await marketplaceContract.addCollection(createCollectionInputValue);
+    } catch (error) {
+      alert(error.message); 
+    }
   }
 
   public sendOffer = async (itemId: number, idx: number) => {
     const { marketplaceContract, sendOfferInputValues } = this.state;
-    marketplaceContract.sendOffer(itemId, { value: parseUnits(sendOfferInputValues[idx]) });
+    try {
+      await marketplaceContract.sendOffer(itemId, { value: parseUnits(sendOfferInputValues[idx]) });
+    } catch (error) {
+      alert(error.message); 
+    }
   }
 
   public buyItem = async (itemId: number) => {
     const { marketplaceContract } = this.state;
     const itemPrice = this.state.items.find(item => item.itemId === itemId)!.price;
-    marketplaceContract.buyItem(itemId, { value: parseUnits(itemPrice) });
+    try {
+      await marketplaceContract.buyItem(itemId, { value: parseUnits(itemPrice) });
+    } catch (error) {
+      alert(error.message); 
+    }
   }
 
   public listItem = async (itemId: number, idx: number) => {
     const { library, address, marketplaceContract, listItemInputValues, items } = this.state;
     const item = items.find(item => item.itemId === itemId)!
     const collectionContract = getContract(item.collectionAddress, ERC721.abi, library, address);
-
-    const approvedAddress = await collectionContract.getApproved(itemId);
-    if (approvedAddress.toLocaleLowerCase() !== MARKETPLACE_ADDRESS.toLocaleLowerCase()) {
-      const approveTransaction = await collectionContract.approve(MARKETPLACE_ADDRESS, item.tokenId);
-      const approveReceipt = await approveTransaction.wait();
-      if (approveReceipt.status != 1) return;
+    try {
+      const approvedAddress = await collectionContract.getApproved(itemId);
+      if (approvedAddress.toLocaleLowerCase() !== MARKETPLACE_ADDRESS.toLocaleLowerCase()) {
+        const approveTransaction = await collectionContract.approve(MARKETPLACE_ADDRESS, item.tokenId);
+        const approveReceipt = await approveTransaction.wait();
+        if (approveReceipt.status != 1) return;
+      }
+  
+      await marketplaceContract.listItem(itemId, parseUnits(listItemInputValues[idx]));
+    } catch (error) {
+      alert(error.message); 
     }
-
-    marketplaceContract.listItem(itemId, parseUnits(listItemInputValues[idx]));
   }
 
   public acceptOffer = async (itemId: number, offerId: number) => {
     const { library, address, marketplaceContract, items } = this.state;
     const item = items.find(item => item.itemId === itemId)!
     const collectionContract = getContract(item.collectionAddress, ERC721.abi, library, address)
+    try {
+      const approvedAddress = await collectionContract.getApproved(itemId);
+      if (approvedAddress.toLocaleLowerCase() !== MARKETPLACE_ADDRESS.toLocaleLowerCase()) {
+        const approveTransaction = await collectionContract.approve(MARKETPLACE_ADDRESS, item.tokenId);
+        const approveReceipt = await approveTransaction.wait();
+        if (approveReceipt.status != 1) return;
+      }
 
-    const approvedAddress = await collectionContract.getApproved(itemId);
-    if (approvedAddress.toLocaleLowerCase() !== MARKETPLACE_ADDRESS.toLocaleLowerCase()) {
-      const approveTransaction = await collectionContract.approve(MARKETPLACE_ADDRESS, item.tokenId);
-      const approveReceipt = await approveTransaction.wait();
-      if (approveReceipt.status != 1) return;
+      const buyer = await marketplaceContract.itemIdToOfferIdToBuyer(itemId, offerId);
+      const price = await marketplaceContract.itemIdToBuyerToPrice(itemId, buyer);
+      await marketplaceContract.acceptOffer(itemId, offerId, { value: price });
+    } catch (error) {
+      alert(error.message); 
     }
-
-    const buyer = await marketplaceContract.itemIdToOfferIdToBuyer(itemId, offerId);
-    const price = await marketplaceContract.itemIdToBuyerToPrice(itemId, buyer);
-    marketplaceContract.acceptOffer(itemId, offerId, { value: price });
   }
 
   public addItem = async () => {
     const { marketplaceContract, addItemCollectionInputValue, addItemTokenIdInputValue } = this.state;
-    marketplaceContract.addItem(addItemCollectionInputValue, +addItemTokenIdInputValue);
+    try {
+      await marketplaceContract.addItem(addItemCollectionInputValue, +addItemTokenIdInputValue);
+    } catch (error) {
+      alert(error.message); 
+    }
   }
 
   public getCollections = async () => {
@@ -673,8 +695,6 @@ class App extends React.Component<any, any> {
             <hr />
 
             <SLanding center>
-              {!this.state.connected ?
-                <ConnectButton onClick={this.onConnect} /> :
                 <Switch>
                   <Route exact path="/">
                     {this.getCollectionsComponent()}
@@ -691,7 +711,7 @@ class App extends React.Component<any, any> {
                       this.getUserItemsComponent()}
                   </Route>
                   <></>
-                </Switch>}
+                </Switch>
             </SLanding>
 
 

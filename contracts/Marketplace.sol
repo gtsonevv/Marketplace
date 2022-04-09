@@ -20,9 +20,9 @@ contract Marketplace is Ownable, ReentrancyGuard {
     }
 
     event CollectionAdded(address contractAddress);
-    event ItemAdded(uint itemId, address nftContract, uint tokenId);
-    event ItemListed(uint itemId, address nftContract, uint tokenId, uint price);
-    event ItemSold(uint itemId, address nftContract, uint tokenId, uint price, address seller, address buyer);
+    event ItemAdded(uint itemId, address contractAddress, uint tokenId);
+    event ItemListed(uint itemId, address contractAddress, uint tokenId, uint price);
+    event ItemSold(uint itemId, address contractAddress, uint tokenId, uint price, address seller, address buyer);
     event OfferSent(uint itemId, address buyer, uint price);
 
     mapping(uint => Item) public idToItem;
@@ -115,7 +115,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
         emit ItemSold(_itemId, nftAddress, tokenId, itemPrice, msg.sender, buyer);
     }
 
-    function rejectOffers(uint _itemId, uint _offerId) private {
+    function rejectOffers(uint _itemId, uint _acceptedOfferId) private {
         uint offerCount = itemIdToOfferCount[_itemId];
 
         if (offerCount == 0) {
@@ -127,7 +127,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
             itemIdToOfferIdToBuyer[_itemId][i] = address(0);
             uint amount = itemIdToBuyerToPrice[_itemId][offerSender];
             itemIdToBuyerToPrice[_itemId][offerSender] = 0;
-            if (i == _offerId) continue;
+            if (i == _acceptedOfferId) continue;
             payable(offerSender).transfer(amount);
         }
         itemIdToOfferCount[_itemId] = 0;
