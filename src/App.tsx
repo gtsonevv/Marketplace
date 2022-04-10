@@ -465,8 +465,10 @@ class App extends React.Component<any, any> {
   public mintNFT = async () => {
     const { address, library, mintTokenURIInputValue } = this.state;
     const testNFTContract = getContract(TEST_COLLECTION_ADDRESS, TestNFT.abi, library, address);
+    this.setState ({ loading: true });
     const transaction = await testNFTContract.mint(`${mintTokenURIInputValue}`);
     const receipt = await transaction.wait();
+    this.setState ({ loading: false });
     if (receipt.status != 1) return;
     const mintedTokenId = await testNFTContract.tokenCount();
     this.setState({ mintedTokenId });

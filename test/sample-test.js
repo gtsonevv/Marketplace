@@ -27,7 +27,7 @@ describe("Marketplace Tests", function () {
   });
 
   it("Should throw an error when try to add a token that's owned by another address", async function() {
-    await testNFT.connect(addr1).mint()
+    await testNFT.connect(addr1).mint("https://news.artnet.com/app/news-upload/2022/01/TK-Bored-Ape.jpg")
     expect(await testNFT.tokenCount()).to.equal(1);
     expect(marketplace.addItem(testNFT.address, 1)).to.be.revertedWith('You are not the owner of that token.');;
   });
