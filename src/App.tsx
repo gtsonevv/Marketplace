@@ -10,8 +10,6 @@ import Column from './components/Column';
 import Loader from './components/Loader';
 import Button from './components/Button';
 import ConnectButton from './components/ConnectButton';
-// import Loader from 'react-spinners-loading'
-// import Loading from '../node_modules/react-fullscreen-loading/lib/loading';
 
 import { Web3Provider } from '@ethersproject/providers';
 import { getChainData } from './helpers/utilities';
@@ -27,6 +25,8 @@ import MARKETPLACE from './abis/Marketplace.json';
 import ERC721 from './abis/ERC721.json';
 import TestNFT from './abis/TestNFT.json';
 
+import './styles.css';
+
 import {
   BrowserRouter as Router,
   Switch,
@@ -36,6 +36,7 @@ import {
 import { formatEther, parseUnits } from 'ethers/lib/utils';
 import Wrapper from './components/Wrapper';
 import Header from './components/Header';
+import { logMsg } from './helpers/dev';
 // import { ethers } from 'hardhat';
 
 // const SLayout = styled.div`
@@ -50,6 +51,7 @@ import Header from './components/Header';
 //   height: 100%;
 //   padding: 0 16px;
 // `;
+
 
 const SContainer = styled.div`
   height: 100%;
@@ -94,6 +96,7 @@ interface Offer {
 }
 
 interface IAppState {
+  loading: boolean;
   fetching: boolean;
   address: string;
   library: any;
@@ -105,6 +108,7 @@ interface IAppState {
   marketplaceContract: any | null;
   info: any | null;
   collections: Collection[];
+  mintTokenURIInputValue: string;
   createCollectionInputValue: string;
   selectedCollection: string;
   items: Item[];
@@ -118,6 +122,7 @@ interface IAppState {
 }
 
 const INITIAL_STATE: IAppState = {
+  loading: false,
   fetching: false,
   address: '',
   library: null,
@@ -129,6 +134,7 @@ const INITIAL_STATE: IAppState = {
   marketplaceContract: null,
   info: null,
   collections: [],
+  mintTokenURIInputValue: "",
   createCollectionInputValue: "",
   selectedCollection: "",
   items: [],
@@ -241,7 +247,7 @@ class App extends React.Component<any, any> {
       const { library } = this.state;
       const address = accounts[0];
       const marketplaceContract = getContract(MARKETPLACE_ADDRESS, MARKETPLACE.abi, library, address);
-      this.setState({ 
+      this.setState({
         address,
         marketplaceContract
       });
@@ -285,18 +291,30 @@ class App extends React.Component<any, any> {
   public addCollection = async () => {
     const { marketplaceContract, createCollectionInputValue } = this.state;
     try {
-      await marketplaceContract.addCollection(createCollectionInputValue);
+      this.setState ({ loading: true });
+      const transaction = await marketplaceContract.addCollection(createCollectionInputValue);
+      await transaction.wait();
+      this.setState ({ loading: false });
     } catch (error) {
-      alert(error.message); 
+      if (error.error) {
+        alert(error.error.message);
+      } else {
+        alert(error.message);
+      }
+      this.setState ({ loading: false });
     }
   }
 
   public sendOffer = async (itemId: number, idx: number) => {
     const { marketplaceContract, sendOfferInputValues } = this.state;
     try {
-      await marketplaceContract.sendOffer(itemId, { value: parseUnits(sendOfferInputValues[idx]) });
+      this.setState ({ loading: true });
+      const transaction = await marketplaceContract.sendOffer(itemId, { value: parseUnits(sendOfferInputValues[idx]) });
+      await transaction.wait();
+      this.setState ({ loading: false });
     } catch (error) {
-      alert(error.message); 
+      alert(error.message);
+      this.setState ({ loading: false });
     }
   }
 
@@ -304,9 +322,13 @@ class App extends React.Component<any, any> {
     const { marketplaceContract } = this.state;
     const itemPrice = this.state.items.find(item => item.itemId === itemId)!.price;
     try {
-      await marketplaceContract.buyItem(itemId, { value: parseUnits(itemPrice) });
+      this.setState ({ loading: true });
+      const transaction = await marketplaceContract.buyItem(itemId, { value: parseUnits(itemPrice) });
+      await transaction.wait();
+      this.setState ({ loading: false });
     } catch (error) {
-      alert(error.message); 
+      alert(error.message);
+      this.setState ({ loading: false });
     }
   }
 
@@ -315,16 +337,21 @@ class App extends React.Component<any, any> {
     const item = items.find(item => item.itemId === itemId)!
     const collectionContract = getContract(item.collectionAddress, ERC721.abi, library, address);
     try {
+      this.setState ({ loading: true });
       const approvedAddress = await collectionContract.getApproved(itemId);
       if (approvedAddress.toLocaleLowerCase() !== MARKETPLACE_ADDRESS.toLocaleLowerCase()) {
         const approveTransaction = await collectionContract.approve(MARKETPLACE_ADDRESS, item.tokenId);
         const approveReceipt = await approveTransaction.wait();
+        this.setState ({ loading: false });
         if (approveReceipt.status != 1) return;
       }
-  
-      await marketplaceContract.listItem(itemId, parseUnits(listItemInputValues[idx]));
+      this.setState ({ loading: true });
+      const listItemTransaction = await marketplaceContract.listItem(itemId, parseUnits(listItemInputValues[idx]));
+      await listItemTransaction.wait();
+      this.setState ({ loading: false });
     } catch (error) {
-      alert(error.message); 
+      alert(error.message);
+      this.setState ({ loading: false });
     }
   }
 
@@ -333,33 +360,43 @@ class App extends React.Component<any, any> {
     const item = items.find(item => item.itemId === itemId)!
     const collectionContract = getContract(item.collectionAddress, ERC721.abi, library, address)
     try {
+      this.setState ({ loading: true });
       const approvedAddress = await collectionContract.getApproved(itemId);
       if (approvedAddress.toLocaleLowerCase() !== MARKETPLACE_ADDRESS.toLocaleLowerCase()) {
         const approveTransaction = await collectionContract.approve(MARKETPLACE_ADDRESS, item.tokenId);
         const approveReceipt = await approveTransaction.wait();
+        this.setState ({ loading: false });
         if (approveReceipt.status != 1) return;
       }
-
+      this.setState ({ loading: true });
       const buyer = await marketplaceContract.itemIdToOfferIdToBuyer(itemId, offerId);
       const price = await marketplaceContract.itemIdToBuyerToPrice(itemId, buyer);
-      await marketplaceContract.acceptOffer(itemId, offerId, { value: price });
+      const acceptOfferTransaction = await marketplaceContract.acceptOffer(itemId, offerId, { value: price });
+      await acceptOfferTransaction.wait();
+      this.setState ({ loading: false });
     } catch (error) {
-      alert(error.message); 
+      alert(error.message);
+      this.setState ({ loading: false });
     }
   }
 
   public addItem = async () => {
     const { marketplaceContract, addItemCollectionInputValue, addItemTokenIdInputValue } = this.state;
     try {
-      await marketplaceContract.addItem(addItemCollectionInputValue, +addItemTokenIdInputValue);
+      this.setState ({ loading: true });
+      const transaction = await marketplaceContract.addItem(addItemCollectionInputValue, +addItemTokenIdInputValue);
+      await transaction.wait();
+      this.setState ({ loading: false });
     } catch (error) {
-      alert(error.message); 
+      alert(error.message);
+      this.setState ({ loading: false });
     }
   }
 
   public getCollections = async () => {
     const { address, library, marketplaceContract } = this.state;
     const collectionCount = await marketplaceContract.collectionCount();
+    logMsg(123, collectionCount)
     const collections: Collection[] = []
     for (let index = 1; index <= collectionCount; index++) {
       const collectionAddress = await marketplaceContract.idToCollection(index);
@@ -409,7 +446,8 @@ class App extends React.Component<any, any> {
     for (let i = 1; i <= itemsCntNumber; i++) {
       const item = await marketplaceContract.idToItem(i);
       const collectionContract = getContract(item.contractAddress, ERC721.abi, library, address)
-      const tokenURI = await collectionContract.tokenURI(item.tokenId);
+      const imgURL = await collectionContract.tokenURI(item.tokenId);
+
       const listing: Item = {
         itemId: i,
         price: formatEther(item.price),
@@ -417,7 +455,7 @@ class App extends React.Component<any, any> {
         owner: item.owner,
         forSale: item.forSale,
         collectionAddress: item.contractAddress,
-        imgURL: `${tokenURI}/${item.tokenId}`
+        imgURL
       }
       items.push(listing);
     }
@@ -425,13 +463,18 @@ class App extends React.Component<any, any> {
   }
 
   public mintNFT = async () => {
-    const { address, library } = this.state;
+    const { address, library, mintTokenURIInputValue } = this.state;
     const testNFTContract = getContract(TEST_COLLECTION_ADDRESS, TestNFT.abi, library, address);
-    const transaction = await testNFTContract.mint();
+    const transaction = await testNFTContract.mint(`${mintTokenURIInputValue}`);
     const receipt = await transaction.wait();
     if (receipt.status != 1) return;
     const mintedTokenId = await testNFTContract.tokenCount();
-    this.setState ({ mintedTokenId });
+    this.setState({ mintedTokenId });
+  }
+
+  public mintTokenURIInputChange = async (event: any) => {
+    const newValue = event.target.value;
+    this.setState({ mintTokenURIInputValue: newValue })
   }
 
   public addItemTokenIdInputChange = async (event: any) => {
@@ -470,16 +513,17 @@ class App extends React.Component<any, any> {
       <Wrapper>
         <h2>My Items</h2>
         <div>
-          { network === "rinkeby" ? 
+          {network === "rinkeby" ?
             <div>
               <p>Minting only works for TestNFT Collection ({TEST_COLLECTION_ADDRESS})</p>
+              <input type='text' onChange={this.mintTokenURIInputChange} value={this.state.mintTokenURIInputValue} placeholder="URI"></input>
               <Button onClick={this.mintNFT}>Mint nft</Button>
-              { mintedTokenId != null ? `You've just minted NFT with id '${mintedTokenId}'` : "" }
-          </div> : <br></br> }
-          
+              {mintedTokenId != null ? `You've just minted NFT with id '${mintedTokenId}'` : ""}
+            </div> : <br></br>}
+
           <br></br>
           <br></br>
-          
+
           <input type='text' onChange={this.addItemCollectionInputChange} value={this.state.addItemCollectionInputValue} placeholder="collection address"></input>
           <input type='text' onChange={this.addItemTokenIdInputChange} value={this.state.addItemTokenIdInputValue} placeholder="token id"></input>
           <Button onClick={this.addItem}>Add item</Button>
@@ -494,9 +538,8 @@ class App extends React.Component<any, any> {
         }).map((item, idx) => {
           return (
             <div key={idx}>
-              <img src={`${item.imgURL}`} />
+              <img style={{maxWidth: "500px", maxHeight: "500px"}} src={`${item.imgURL}`} />
               <div>
-                <p>Item id: {item.itemId}</p>
                 <p>Collection address: {item.collectionAddress}</p>
                 <p>Token id: {item.tokenId}</p>
                 {item.forSale ?
@@ -548,9 +591,8 @@ class App extends React.Component<any, any> {
         }).map((item, idx) => {
           return (
             <div key={idx}>
-              <img src={`${item.imgURL}`} />
+               <img style={{maxWidth: "500px", maxHeight: "500px"}} src={`${item.imgURL}`} />
               <div>
-                <p>Item id: {item.itemId}</p>
                 <p>Collection address: {item.collectionAddress}</p>
                 <p>Token id: {item.tokenId}</p>
                 {item.forSale ?
@@ -588,7 +630,7 @@ class App extends React.Component<any, any> {
           return item.forSale && item.collectionAddress.toLocaleLowerCase() === selectedCollection.toLocaleLowerCase()
         }).map((item, idx) => {
           return (<div key={idx}>
-            <img src={`${item.imgURL}`} />
+             <img style={{maxWidth: "500px", maxHeight: "500px"}} src={`${item.imgURL}`} />
             <div>
               <p>Collection address: {item.collectionAddress}</p>
               <p>Token id: {item.tokenId}</p>
@@ -648,78 +690,77 @@ class App extends React.Component<any, any> {
       address,
       connected,
       chainId,
-      fetching
+      fetching,
+      loading
     } = this.state;
 
     return (
-      <div>
-        {/* <Loading loading background="#2ecc71" loaderColor="#3498db" /> */}
+      <div> {!loading ?
         <div>
-          <Header
-            connected={connected}
-            address={address}
-            chainId={chainId}
-            killSession={this.resetApp}
-          />
           <div>
-            {fetching ? (
+            <Header
+              connected={connected}
+              address={address}
+              chainId={chainId}
+              killSession={this.resetApp}
+            />
+            <div>
+              {fetching ? (
+                <div>
+                  <SContainer>
+                    <Loader />
+                  </SContainer>
+                </div>
+              ) : (
+                <div>
+                  {!this.state.connected && <ConnectButton onClick={this.onConnect} />}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {this.state.connected ?
+            <Router>
               <div>
-                <SContainer>
-                  <Loader />
+                <SContainer className="topnav">
+                  <ul>
+                    <li>
+                      <Link to="/">Collections</Link>
+                    </li>
+                    <br></br>
+                    <li>
+                      <Link to="/MyItems" onClick={this.getOffers}>
+                        My Items
+                      </Link>
+                    </li>
+                  </ul>
                 </SContainer>
+
+                <SLanding center>
+                  <Switch>
+                    <Route exact path="/">
+                      {this.getCollectionsComponent()}
+                    </Route>
+                    <Route path="/MyItems">
+                      {this.getMyItemsComponent()}
+                    </Route>
+                    <Route path="/items">
+                      {this.getCollectionItemsComponent()}
+                    </Route>
+                    <Route path="/user">
+                      {this.state.selectedUser.toLocaleLowerCase() === this.state.address.toLocaleLowerCase() ?
+                        this.getMyItemsComponent() :
+                        this.getUserItemsComponent()}
+                    </Route>
+                    <></>
+                  </Switch>
+                </SLanding>
+
+
               </div>
-            ) : (
-              <div>
-                {!this.state.connected && <ConnectButton onClick={this.onConnect} />}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <Router>
-          <div>
-            <SContainer>
-            <ul>
-              <li>
-                <Link to="/">Collections</Link>
-              </li>
-              <br></br>
-              <li>
-                <Link to="/MyItems" onClick={this.getOffers}>
-                  My Items
-                </Link>
-              </li>
-            </ul>
-            </SContainer>
-
-            <hr />
-
-            <SLanding center>
-                <Switch>
-                  <Route exact path="/">
-                    {this.getCollectionsComponent()}
-                  </Route>
-                  <Route path="/MyItems">
-                    {this.getMyItemsComponent()}
-                  </Route>
-                  <Route path="/items">
-                    {this.getCollectionItemsComponent()}
-                  </Route>
-                  <Route path="/user">
-                    {this.state.selectedUser.toLocaleLowerCase() === this.state.address.toLocaleLowerCase() ?
-                      this.getMyItemsComponent() :
-                      this.getUserItemsComponent()}
-                  </Route>
-                  <></>
-                </Switch>
-            </SLanding>
-
-
-          </div>
-        </Router>
-
-      </div>
-
+            </Router> : <div></div>}
+        </div> : <Wrapper><Loader /></Wrapper>
+      }  </div>
     );
   };
 }
