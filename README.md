@@ -8,7 +8,7 @@
 - Send offers for other user's NFTs.
 - Users can see the NFTs of another user.
 
-#### Install pachages
+#### Install packages
 ```
 npm install
 ```
